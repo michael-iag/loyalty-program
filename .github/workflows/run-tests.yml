@@ -2,21 +2,32 @@ name: Run BDD Tests and Generate Allure Report
 
 on:
   push:
-    branches: [ main, master ] # Trigger on pushes to main or master
+    branches: [ main, master ]
   pull_request:
-    branches: [ main, master ] # Trigger on pull requests to main or master
+    branches: [ main, master ]
+
+# Update permissions to ensure we can push to the repository
+permissions:
+  contents: write  # Changed from 'read' to 'write' to allow pushing to branches
+  pages: write
+  id-token: write
+
+# Configure pages deployment environment
+env:
+  ALLURE_RESULTS_DIR: allure-results
+  ALLURE_REPORT_DIR: allure-report
 
 jobs:
   behave-tests:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4 # Use latest version
+      uses: actions/checkout@v4
 
     - name: Set up Python
-      uses: actions/setup-python@v5 # Use latest version
+      uses: actions/setup-python@v5
       with:
-        python-version: '3.10' # Specify Python version
+        python-version: '3.10'
 
     - name: Install dependencies
       run: |
@@ -25,14 +36,60 @@ jobs:
 
     - name: Run Behave Tests with Allure
       run: |
-        behave -f allure_behave.formatter:AllureFormatter -o allure-results features/
-      # Continue even if tests fail, so report is always uploaded
-      continue-on-error: true 
+        behave -f allure_behave.formatter:AllureFormatter -o ${{ env.ALLURE_RESULTS_DIR }} features/
+      continue-on-error: true
 
-    - name: Upload Allure Results
-      uses: actions/upload-artifact@v4 # Use latest version
-      if: always() # Always upload artifacts, even if tests fail
+    - name: Generate Allure Report
+      if: always()
+      run: |
+        # Install Allure command-line tool
+        curl -o allure-commandline.tgz -OLs https://repo.maven.apache.org/maven2/io/qameta/allure/allure-commandline/2.24.0/allure-commandline-2.24.0.tgz
+        tar -zxvf allure-commandline.tgz
+        export PATH=$PATH:$(pwd)/allure-2.24.0/bin
+        
+        # Generate the report
+        allure generate ${{ env.ALLURE_RESULTS_DIR }} -o ${{ env.ALLURE_REPORT_DIR }} --clean
+    
+    # Archive artifacts for the deploy job to use - update to v4
+    - name: Archive Allure Report
+      uses: actions/upload-artifact@v4
       with:
-        name: allure-results-loyalty-program
-        path: allure-results/
-        retention-days: 7 # Keep artifacts for 7 days
+        name: allure-report
+        path: ${{ env.ALLURE_REPORT_DIR }}
+        retention-days: 1
+
+  # Separate job for GitHub Pages deployment that waits for the tests to finish
+  deploy-pages:
+    runs-on: ubuntu-latest
+    needs: behave-tests  # This ensures this job runs only after behave-tests completes
+    if: always()  # Run even if tests fail
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        persist-credentials: true
+    
+    # Download the report artifact from the previous job - update to v4
+    - name: Download Allure Report
+      uses: actions/download-artifact@v4
+      with:
+        name: allure-report
+        path: ${{ env.ALLURE_REPORT_DIR }}
+    
+    - name: Deploy to GitHub Pages
+      run: |
+        git config --global user.name 'github-actions[bot]'
+        git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+        
+        # Create a temporary branch and copy the report
+        git checkout --orphan gh-pages-temp
+        git rm -rf .
+        cp -r ${{ env.ALLURE_REPORT_DIR }}/* .
+        
+        # Make sure there's at least one file for git to commit
+        touch .nojekyll
+        
+        # Commit and push to gh-pages
+        git add .
+        git commit -m "Update Allure report"
+        git push -f origin gh-pages-temp:gh-pages 

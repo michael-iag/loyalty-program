@@ -20,12 +20,14 @@ def step_impl(context):
 @then("the member should have {points:d} points")
 def step_impl(context, points):
     member_details = context.loyalty.get_member_details(context.current_member)
-    assert member_details["points"] == points, f"Expected {points} points for {context.current_member}, but got {member_details["points"]}"
+    actual_points = member_details["points"]
+    assert actual_points == points, f"Expected {points} points for {context.current_member}, but got {actual_points}"
 
 @then("the member should be in the \"{tier}\" tier")
 def step_impl(context, tier):
     member_details = context.loyalty.get_member_details(context.current_member)
-    assert member_details["tier"] == tier, f"Expected tier {tier} for {context.current_member}, but got {member_details["tier"]}"
+    actual_tier = member_details["tier"]
+    assert actual_tier == tier, f"Expected tier {tier} for {context.current_member}, but got {actual_tier}"
 
 @given("there is a member \"{member_name}\"")
 def step_impl(context, member_name):
@@ -56,12 +58,14 @@ def step_impl(context):
 @then("\"{member_name}\" should have {points:d} points")
 def step_impl(context, member_name, points):
     member_details = context.loyalty.get_member_details(member_name)
-    assert member_details["points"] == points, f"Expected {points} points for {member_name}, but got {member_details["points"]}"
+    actual_points = member_details["points"]
+    assert actual_points == points, f"Expected {points} points for {member_name}, but got {actual_points}"
 
 @then("\"{member_name}\" should be in the \"{tier}\" tier")
 def step_impl(context, member_name, tier):
     member_details = context.loyalty.get_member_details(member_name)
-    assert member_details["tier"] == tier, f"Expected tier {tier} for {member_name}, but got {member_details["tier"]}"
+    actual_tier = member_details["tier"]
+    assert actual_tier == tier, f"Expected tier {tier} for {member_name}, but got {actual_tier}"
 
 @when("I redeem {points:d} points from \"{member_name}\"")
 def step_impl(context, points, member_name):
@@ -86,7 +90,8 @@ def step_impl(context):
 def step_impl(context, member_name, points):
     # Verify points haven't changed after failed redemption
     member_details = context.loyalty.get_member_details(member_name)
-    assert member_details["points"] == points, f"Expected {points} points for {member_name} after failed redemption, but got {member_details["points"]}"
+    actual_points = member_details["points"]
+    assert actual_points == points, f"Expected {points} points for {member_name} after failed redemption, but got {actual_points}"
 
 @then("the member should not be added")
 def step_impl(context):
