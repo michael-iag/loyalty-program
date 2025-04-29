@@ -1,51 +1,48 @@
 name: Run BDD Tests and Generate Allure Report
+
 on:
-  push:
-    branches: [ main, master ]
-  pull_request:
-    branches: [ main, master ]
+  # Comment out automatic triggers
+  # push:
+  #   branches: [ main, master ]
+  # pull_request:
+  #   branches: [ main, master ]
+  
+  # Add manual trigger
+  workflow_dispatch:
+
 # Update permissions to ensure we can push to the repository
 permissions:
   contents: write  # Changed from 'read' to 'write' to allow pushing to branches
   pages: write
   id-token: write
+
 # Configure pages deployment environment
 env:
   ALLURE_RESULTS_DIR: allure-results
   ALLURE_REPORT_DIR: allure-report
+
 jobs:
   behave-tests:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
+
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
         python-version: '3.10'
+
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-    
-    - name: Set Datadog Environment Variables
-      env:
-        DD_API_KEY: ${{ secrets.DD_API_KEY }}
-        DD_ENV: ci
-        DD_SERVICE: loyalty-program-tests
-        DD_SITE: datadoghq.eu
-      run: echo "Datadog environment variables set."
-    
-    - name: Run Behave Tests with Datadog and Allure
-      env:
-        DD_API_KEY: ${{ secrets.DD_API_KEY }}
-        DD_ENV: ci
-        DD_SERVICE: loyalty-program-tests
-        DD_SITE: datadoghq.eu
+
+    - name: Run Behave Tests with Allure
       run: |
-        ddtrace-run behave -f allure_behave.formatter:AllureFormatter -o ${{ env.ALLURE_RESULTS_DIR }} features/
+        behave -f allure_behave.formatter:AllureFormatter -o ${{ env.ALLURE_RESULTS_DIR }} features/
       continue-on-error: true
-    
+
     - name: Generate Allure Report
       if: always()
       run: |
@@ -64,6 +61,7 @@ jobs:
         name: allure-report
         path: ${{ env.ALLURE_REPORT_DIR }}
         retention-days: 1
+
   # Separate job for GitHub Pages deployment that waits for the tests to finish
   deploy-pages:
     runs-on: ubuntu-latest
@@ -98,4 +96,4 @@ jobs:
         # Commit and push to gh-pages
         git add .
         git commit -m "Update Allure report"
-        git push -f origin gh-pages-temp:gh-pages
+        git push -f origin gh-pages-temp:gh-pages 
