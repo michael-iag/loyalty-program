@@ -56,13 +56,13 @@ def after_scenario(context, scenario):
     statsd.distribution("behave.scenario.duration", scenario_duration_ms, tags=scenario_tags)
 
     # Increment status counters
-    if scenario.status == "passed":
+    if scenario.status.name == "passed":
         context.passed_scenarios += 1
         statsd.increment("behave.scenario.passed", tags=scenario_tags)
-    elif scenario.status == "failed":
+    elif scenario.status.name == "failed":
         context.failed_scenarios += 1
         statsd.increment("behave.scenario.failed", tags=scenario_tags)
-    elif scenario.status == "skipped":
+    elif scenario.status.name == "skipped":
         context.skipped_scenarios += 1
         statsd.increment("behave.scenario.skipped", tags=scenario_tags)
     else:
