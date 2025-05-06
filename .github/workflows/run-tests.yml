@@ -197,6 +197,13 @@ jobs:
         echo "Critical tests: $CRITICAL_TESTS"
         echo "Pass rate: $PASS_RATE%"
 
+        # Save to GitHub Environment File to pass to next steps
+        echo "TOTAL_TESTS=$TOTAL_TESTS" >> $GITHUB_ENV
+        echo "PASSED_TESTS=$PASSED_TESTS" >> $GITHUB_ENV
+        echo "FAILED_TESTS=$FAILED_TESTS" >> $GITHUB_ENV
+        echo "CRITICAL_TESTS=$CRITICAL_TESTS" >> $GITHUB_ENV
+        echo "PASS_RATE=$PASS_RATE" >> $GITHUB_ENV
+
     - name: Generate Metrics JSON
       run: |
         # Create metrics.json file
