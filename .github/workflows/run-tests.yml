@@ -25,6 +25,7 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
+
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
@@ -38,7 +39,6 @@ jobs:
     - name: Install Python dependencies
       run: |
         python -m pip install --upgrade pip
-        # Assuming requirements.txt contains behave, allure-behave, ddtrace (ddtrace might still be useful for custom metrics later, keep it for now)
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
 
     - name: Install Datadog CI CLI
@@ -53,6 +53,14 @@ jobs:
         # Removed ddtrace-run, added --junit flag
         behave --junit --junit-directory ${{ env.JUNIT_RESULTS_DIR }} -f allure_behave.formatter:AllureFormatter -o ${{ env.ALLURE_RESULTS_DIR }} features/
       continue-on-error: true # Continue even if tests fail to allow report upload
+
+    - name: Upload JUnit Results
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: junit-results
+        path: ${{ env.JUNIT_RESULTS_DIR }}
+        retention-days: 1
 
     - name: Upload Test Results to Datadog
       if: always() # Run this step even if previous steps fail
@@ -101,15 +109,145 @@ jobs:
         name: allure-report
         path: ${{ env.ALLURE_REPORT_DIR }}
 
-    - name: Deploy to GitHub Pages
+    - name: Download JUnit Results
+      uses: actions/download-artifact@v4
+      with:
+        name: junit-results  # Make sure this matches what was uploaded in the behave-tests job
+        path: ${{ env.JUNIT_RESULTS_DIR }}
+        
+    - name: Prepare GitHub Pages Branch
       run: |
         git config --global user.name 'github-actions[bot]'
         git config --global user.email 'github-actions[bot]@users.noreply.github.com'
         git checkout --orphan gh-pages-temp
         git rm -rf .
+        
+        # Copy Allure report
         cp -r ${{ env.ALLURE_REPORT_DIR }}/* .
+
+    - name: Extract Test Metrics
+      run: |
+        # ===== Generate metrics.json using actual test results =====
+        echo "Generating metrics.json for Sanity Test Hub integration..."
+        
+        # Debug JUnit directory contents
+        echo "Checking JUnit directory..."
+        ls -la ${{ env.JUNIT_RESULTS_DIR }}
+        
+        # Create a Python script for reliable parsing
+        cat > parse_junit.py << EOF
+        import sys
+        import xml.etree.ElementTree as ET
+        import os
+        import glob
+
+        # Find XML files
+        xml_files = glob.glob(os.path.join('${{ env.JUNIT_RESULTS_DIR }}', '*.xml'))
+        if not xml_files:
+            print("No XML files found")
+            sys.exit(1)
+
+        total_tests = 0
+        failed_tests = 0
+        critical_tests = 0
+
+        # Process each XML file
+        for xml_file in xml_files:
+            try:
+                tree = ET.parse(xml_file)
+                root = tree.getroot()
+                
+                # Count test cases
+                testcases = root.findall('.//testcase')
+                total_tests += len(testcases)
+                
+                # Count failed tests
+                failures = root.findall('.//testcase/failure')
+                failed_tests += len(failures)
+                
+                # Count critical tests by searching system-out for @critical tag
+                for testcase in testcases:
+                    sysout = testcase.find('system-out')
+                    if sysout is not None and '@critical' in sysout.text:
+                        critical_tests += 1
+            except Exception as e:
+                print(f"Error processing {xml_file}: {e}")
+
+        # Calculate passed tests and pass rate
+        passed_tests = total_tests - failed_tests
+        pass_rate = 0 if total_tests == 0 else int((passed_tests * 100) / total_tests)
+
+        # Output as simple text for bash to read
+        print(f"TOTAL_TESTS={total_tests}")
+        print(f"PASSED_TESTS={passed_tests}")
+        print(f"FAILED_TESTS={failed_tests}")
+        print(f"CRITICAL_TESTS={critical_tests}")
+        print(f"PASS_RATE={pass_rate}")
+        EOF
+
+        # Run the Python script and source the results
+        echo "Running Python parser..."
+        python parse_junit.py > metrics_data.txt
+        source <(cat metrics_data.txt)
+        
+        echo "Extracted metrics:"
+        echo "Total tests: $TOTAL_TESTS"
+        echo "Passed tests: $PASSED_TESTS"
+        echo "Failed tests: $FAILED_TESTS"
+        echo "Critical tests: $CRITICAL_TESTS"
+        echo "Pass rate: $PASS_RATE%"
+
+    - name: Generate Metrics JSON
+      run: |
+        # Create metrics.json file
+        echo "{" > metrics.json
+        echo "  \"timestamp\": \"$(date -u +"%Y-%m-%dT%H:%M:%SZ")\"," >> metrics.json
+        echo "  \"total_tests\": $TOTAL_TESTS," >> metrics.json
+        echo "  \"passed_tests\": $PASSED_TESTS," >> metrics.json
+        echo "  \"failed_tests\": $FAILED_TESTS," >> metrics.json
+        echo "  \"pass_rate\": $PASS_RATE," >> metrics.json
+        echo "  \"duration_seconds\": 0," >> metrics.json
+        echo "  \"critical_tests_count\": $CRITICAL_TESTS," >> metrics.json
+        echo "  \"run_id\": \"${{ github.run_id }}\"," >> metrics.json
+        echo "  \"repository\": \"${{ github.repository }}\"," >> metrics.json
+        echo "  \"branch\": \"${{ github.ref }}\"" >> metrics.json
+        echo "}" >> metrics.json
+        
+        echo "Created metrics.json:"
+        cat metrics.json
+        echo "Validating JSON format..."
+        if ! jq empty metrics.json; then
+          echo "WARNING: Invalid JSON detected in metrics.json!"
+        else
+          echo "JSON is valid."
+        fi
+
+    - name: Create Dashboard HTML
+      run: |
+        # Create a redirect from the root to the Allure report index
+        echo '<!DOCTYPE html>' > dashboard.html
+        echo '<html>' >> dashboard.html
+        echo '<head>' >> dashboard.html
+        echo '  <meta http-equiv="refresh" content="0; url=index.html">' >> dashboard.html
+        echo '</head>' >> dashboard.html
+        echo '<body>' >> dashboard.html
+        echo '  <p>Redirecting to test report...</p>' >> dashboard.html
+        echo '</body>' >> dashboard.html
+        echo '</html>' >> dashboard.html
+        
         touch .nojekyll
+
+    - name: Deploy to GitHub Pages
+      run: |
         git add .
-        git commit -m "Update Allure report"
+        git commit -m "Update Allure report and metrics"
         git push -f origin gh-pages-temp:gh-pages
 
+    # This step auto triggers the hub's stats workflow
+    - name: Trigger stats workflow update
+      if: success() && github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+      run: |
+        # Use GitHub CLI to trigger workflow_dispatch event on the stats repo
+        gh workflow run update-stats.yml --repo ${{ github.repository_owner }}/sanity-test-hub
+      env:
+        GITHUB_TOKEN: ${{ secrets.WORKFLOW_HUB_TRIGGER_PAT }}
