@@ -1,0 +1,8 @@
+"Status","Start Time","Stop Time","Duration in ms","Parent Suite","Suite","Sub Suite","Test Class","Test Method","Name","Description"
+"passed","Fri May 09 18:04:30 UTC 2025","Fri May 09 18:04:30 UTC 2025","2","","","","","","Add a new member to the loyalty program",""
+"passed","Fri May 09 18:04:30 UTC 2025","Fri May 09 18:04:30 UTC 2025","2","","","","","","Add an existing member",""
+"passed","Fri May 09 18:04:30 UTC 2025","Fri May 09 18:04:30 UTC 2025","3","","","","","","Member tier changes based on points",""
+"passed","Fri May 09 18:04:30 UTC 2025","Fri May 09 18:04:30 UTC 2025","1","","","","","","Add invalid points",""
+"passed","Fri May 09 18:04:30 UTC 2025","Fri May 09 18:04:30 UTC 2025","2","","","","","","Attempt to redeem more points than available",""
+"passed","Fri May 09 18:04:30 UTC 2025","Fri May 09 18:04:30 UTC 2025","2","","","","","","Redeem points from a member's account",""
+"passed","Fri May 09 18:04:30 UTC 2025","Fri May 09 18:04:30 UTC 2025","1","","","","","","Add points to a member's account",""

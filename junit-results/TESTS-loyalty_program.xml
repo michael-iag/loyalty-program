@@ -1,0 +1,112 @@
+<testsuite name="loyalty_program.Loyalty Program" tests="7" errors="0" failures="0" skipped="0" time="0.003284" timestamp="2025-05-09T18:04:30.951800" hostname="Xv8MQVxxw5SaH7"><testcase classname="loyalty_program.Loyalty Program" name="Add a new member to the loyalty program" status="passed" time="0.000443"><system-out>
+<![CDATA[
+@scenario.begin
+
+  @sanity @critical
+  Scenario: Add a new member to the loyalty program
+    Given the loyalty program system is initialized ... passed in 0.000s
+    When I add a new member "John Smith" ... passed in 0.000s
+    Then the member should be added successfully ... passed in 0.000s
+    And the member should have 0 points ... passed in 0.000s
+    And the member should be in the "Bronze" tier ... passed in 0.000s
+
+@scenario.end
+--------------------------------------------------------------------------------
+]]>
+</system-out></testcase><testcase classname="loyalty_program.Loyalty Program" name="Add points to a member's account" status="passed" time="0.000457"><system-out>
+<![CDATA[
+@scenario.begin
+
+  @sanity
+  Scenario: Add points to a member's account
+    Given the loyalty program system is initialized ... passed in 0.000s
+    And there is a member "Jane Doe" ... passed in 0.000s
+    When I add 5000 points to "Jane Doe" ... passed in 0.000s
+    Then the points should be added successfully ... passed in 0.000s
+    And "Jane Doe" should have 5000 points ... passed in 0.000s
+    And "Jane Doe" should be in the "Silver" tier ... passed in 0.000s
+
+@scenario.end
+--------------------------------------------------------------------------------
+]]>
+</system-out></testcase><testcase classname="loyalty_program.Loyalty Program" name="Redeem points from a member's account" status="passed" time="0.000451"><system-out>
+<![CDATA[
+@scenario.begin
+
+  @critical
+  Scenario: Redeem points from a member's account
+    Given the loyalty program system is initialized ... passed in 0.000s
+    And there is a member "Robert Johnson" with 10000 points ... passed in 0.000s
+    When I redeem 3000 points from "Robert Johnson" ... passed in 0.000s
+    Then the points should be redeemed successfully ... passed in 0.000s
+    And "Robert Johnson" should have 7000 points ... passed in 0.000s
+    And "Robert Johnson" should be in the "Silver" tier ... passed in 0.000s
+
+@scenario.end
+--------------------------------------------------------------------------------
+]]>
+</system-out></testcase><testcase classname="loyalty_program.Loyalty Program" name="Member tier changes based on points" status="passed" time="0.000861"><system-out>
+<![CDATA[
+@scenario.begin
+
+  @edgecase
+  Scenario: Member tier changes based on points
+    Given the loyalty program system is initialized ... passed in 0.000s
+    And there is a member "Emily Davis" ... passed in 0.000s
+    When I add 6000 points to "Emily Davis" ... passed in 0.000s
+    Then "Emily Davis" should be in the "Silver" tier ... passed in 0.000s
+    When I add 10000 points to "Emily Davis" ... passed in 0.000s
+    Then "Emily Davis" should be in the "Gold" tier ... passed in 0.000s
+    When I add 15000 points to "Emily Davis" ... passed in 0.000s
+    Then "Emily Davis" should be in the "Platinum" tier ... passed in 0.000s
+    When I redeem 25000 points from "Emily Davis" ... passed in 0.000s
+    Then "Emily Davis" should be in the "Silver" tier ... passed in 0.000s
+
+@scenario.end
+--------------------------------------------------------------------------------
+]]>
+</system-out></testcase><testcase classname="loyalty_program.Loyalty Program" name="Attempt to redeem more points than available" status="passed" time="0.000386"><system-out>
+<![CDATA[
+@scenario.begin
+
+  @negative
+  Scenario: Attempt to redeem more points than available
+    Given the loyalty program system is initialized ... passed in 0.000s
+    And there is a member "Michael Wilson" with 5000 points ... passed in 0.000s
+    When I attempt to redeem 6000 points from "Michael Wilson" ... passed in 0.000s
+    Then the redemption should fail ... passed in 0.000s
+    And "Michael Wilson" should still have 5000 points ... passed in 0.000s
+
+@scenario.end
+--------------------------------------------------------------------------------
+]]>
+</system-out></testcase><testcase classname="loyalty_program.Loyalty Program" name="Add an existing member" status="passed" time="0.000315"><system-out>
+<![CDATA[
+@scenario.begin
+
+  @sanity
+  Scenario: Add an existing member
+    Given the loyalty program system is initialized ... passed in 0.000s
+    And there is a member "Sarah Brown" ... passed in 0.000s
+    When I add a new member "Sarah Brown" ... passed in 0.000s
+    Then the member should not be added ... passed in 0.000s
+
+@scenario.end
+--------------------------------------------------------------------------------
+]]>
+</system-out></testcase><testcase classname="loyalty_program.Loyalty Program" name="Add invalid points" status="passed" time="0.000371"><system-out>
+<![CDATA[
+@scenario.begin
+
+  @negative
+  Scenario: Add invalid points
+    Given the loyalty program system is initialized ... passed in 0.000s
+    And there is a member "David Lee" ... passed in 0.000s
+    When I add -100 points to "David Lee" ... passed in 0.000s
+    Then the points should not be added ... passed in 0.000s
+    And "David Lee" should have 0 points ... passed in 0.000s
+
+@scenario.end
+--------------------------------------------------------------------------------
+]]>
+</system-out></testcase></testsuite>
