@@ -125,109 +125,116 @@ jobs:
         # Copy Allure report
         cp -r ${{ env.ALLURE_REPORT_DIR }}/* .
 
-    - name: Extract Test Metrics
+    # - name: Extract Test Metrics
+    #   run: |
+    #     # ===== Generate metrics.json using actual test results =====
+    #     echo "Generating metrics.json for Sanity Test Hub integration..."
+    #     
+    #     # Debug JUnit directory contents
+    #     echo "Checking JUnit directory..."
+    #     ls -la ${{ env.JUNIT_RESULTS_DIR }}
+    #     
+    #     # Create a Python script for reliable parsing
+    #     cat > parse_junit.py << EOF
+    #     import sys
+    #     import xml.etree.ElementTree as ET
+    #     import os
+    #     import glob
+    # 
+    #     # Find XML files
+    #     xml_files = glob.glob(os.path.join('${{ env.JUNIT_RESULTS_DIR }}', '*.xml'))
+    #     if not xml_files:
+    #         print("No XML files found")
+    #         sys.exit(1)
+    # 
+    #     total_tests = 0
+    #     failed_tests = 0
+    #     critical_tests = 0
+    # 
+    #     # Process each XML file
+    #     for xml_file in xml_files:
+    #         try:
+    #             tree = ET.parse(xml_file)
+    #             root = tree.getroot()
+    #             
+    #             # Count test cases
+    #             testcases = root.findall('.//testcase')
+    #             total_tests += len(testcases)
+    #             
+    #             # Count failed tests
+    #             failures = root.findall('.//testcase/failure')
+    #             failed_tests += len(failures)
+    #             
+    #             # Count critical tests by searching system-out for @critical tag
+    #             for testcase in testcases:
+    #                 sysout = testcase.find('system-out')
+    #                 if sysout is not None and '@critical' in sysout.text:
+    #                     critical_tests += 1
+    #         except Exception as e:
+    #             print(f"Error processing {xml_file}: {e}")
+    # 
+    #     # Calculate passed tests and pass rate
+    #     passed_tests = total_tests - failed_tests
+    #     pass_rate = 0 if total_tests == 0 else int((passed_tests * 100) / total_tests)
+    # 
+    #     # Output as simple text for bash to read
+    #     print(f"TOTAL_TESTS={total_tests}")
+    #     print(f"PASSED_TESTS={passed_tests}")
+    #     print(f"FAILED_TESTS={failed_tests}")
+    #     print(f"CRITICAL_TESTS={critical_tests}")
+    #     print(f"PASS_RATE={pass_rate}")
+    #     EOF
+    # 
+    #     # Run the Python script and source the results
+    #     echo "Running Python parser..."
+    #     python parse_junit.py > metrics_data.txt
+    #     source <(cat metrics_data.txt)
+    #     
+    #     echo "Extracted metrics:"
+    #     echo "Total tests: $TOTAL_TESTS"
+    #     echo "Passed tests: $PASSED_TESTS"
+    #     echo "Failed tests: $FAILED_TESTS"
+    #     echo "Critical tests: $CRITICAL_TESTS"
+    #     echo "Pass rate: $PASS_RATE%"
+    # 
+    #     # Save to GitHub Environment File to pass to next steps
+    #     echo "TOTAL_TESTS=$TOTAL_TESTS" >> $GITHUB_ENV
+    #     echo "PASSED_TESTS=$PASSED_TESTS" >> $GITHUB_ENV
+    #     echo "FAILED_TESTS=$FAILED_TESTS" >> $GITHUB_ENV
+    #     echo "CRITICAL_TESTS=$CRITICAL_TESTS" >> $GITHUB_ENV
+    #     echo "PASS_RATE=$PASS_RATE" >> $GITHUB_ENV
+
+    - name: Copy JUnit XML for Hub Processing
       run: |
-        # ===== Generate metrics.json using actual test results =====
-        echo "Generating metrics.json for Sanity Test Hub integration..."
-        
-        # Debug JUnit directory contents
-        echo "Checking JUnit directory..."
-        ls -la ${{ env.JUNIT_RESULTS_DIR }}
-        
-        # Create a Python script for reliable parsing
-        cat > parse_junit.py << EOF
-        import sys
-        import xml.etree.ElementTree as ET
-        import os
-        import glob
+        # Copy all JUnit XML files to the root for publishing
+        cp -r ${{ env.JUNIT_RESULTS_DIR }}/*.xml .
+        echo "JUnit XML files copied to pages directory"
+        ls -la *.xml
 
-        # Find XML files
-        xml_files = glob.glob(os.path.join('${{ env.JUNIT_RESULTS_DIR }}', '*.xml'))
-        if not xml_files:
-            print("No XML files found")
-            sys.exit(1)
-
-        total_tests = 0
-        failed_tests = 0
-        critical_tests = 0
-
-        # Process each XML file
-        for xml_file in xml_files:
-            try:
-                tree = ET.parse(xml_file)
-                root = tree.getroot()
-                
-                # Count test cases
-                testcases = root.findall('.//testcase')
-                total_tests += len(testcases)
-                
-                # Count failed tests
-                failures = root.findall('.//testcase/failure')
-                failed_tests += len(failures)
-                
-                # Count critical tests by searching system-out for @critical tag
-                for testcase in testcases:
-                    sysout = testcase.find('system-out')
-                    if sysout is not None and '@critical' in sysout.text:
-                        critical_tests += 1
-            except Exception as e:
-                print(f"Error processing {xml_file}: {e}")
-
-        # Calculate passed tests and pass rate
-        passed_tests = total_tests - failed_tests
-        pass_rate = 0 if total_tests == 0 else int((passed_tests * 100) / total_tests)
-
-        # Output as simple text for bash to read
-        print(f"TOTAL_TESTS={total_tests}")
-        print(f"PASSED_TESTS={passed_tests}")
-        print(f"FAILED_TESTS={failed_tests}")
-        print(f"CRITICAL_TESTS={critical_tests}")
-        print(f"PASS_RATE={pass_rate}")
-        EOF
-
-        # Run the Python script and source the results
-        echo "Running Python parser..."
-        python parse_junit.py > metrics_data.txt
-        source <(cat metrics_data.txt)
-        
-        echo "Extracted metrics:"
-        echo "Total tests: $TOTAL_TESTS"
-        echo "Passed tests: $PASSED_TESTS"
-        echo "Failed tests: $FAILED_TESTS"
-        echo "Critical tests: $CRITICAL_TESTS"
-        echo "Pass rate: $PASS_RATE%"
-
-        # Save to GitHub Environment File to pass to next steps
-        echo "TOTAL_TESTS=$TOTAL_TESTS" >> $GITHUB_ENV
-        echo "PASSED_TESTS=$PASSED_TESTS" >> $GITHUB_ENV
-        echo "FAILED_TESTS=$FAILED_TESTS" >> $GITHUB_ENV
-        echo "CRITICAL_TESTS=$CRITICAL_TESTS" >> $GITHUB_ENV
-        echo "PASS_RATE=$PASS_RATE" >> $GITHUB_ENV
-
-    - name: Generate Metrics JSON
-      run: |
-        # Create metrics.json file
-        echo "{" > metrics.json
-        echo "  \"timestamp\": \"$(date -u +"%Y-%m-%dT%H:%M:%SZ")\"," >> metrics.json
-        echo "  \"total_tests\": $TOTAL_TESTS," >> metrics.json
-        echo "  \"passed_tests\": $PASSED_TESTS," >> metrics.json
-        echo "  \"failed_tests\": $FAILED_TESTS," >> metrics.json
-        echo "  \"pass_rate\": $PASS_RATE," >> metrics.json
-        echo "  \"duration_seconds\": 0," >> metrics.json
-        echo "  \"critical_tests_count\": $CRITICAL_TESTS," >> metrics.json
-        echo "  \"run_id\": \"${{ github.run_id }}\"," >> metrics.json
-        echo "  \"repository\": \"${{ github.repository }}\"," >> metrics.json
-        echo "  \"branch\": \"${{ github.ref }}\"" >> metrics.json
-        echo "}" >> metrics.json
-        
-        echo "Created metrics.json:"
-        cat metrics.json
-        echo "Validating JSON format..."
-        if ! jq empty metrics.json; then
-          echo "WARNING: Invalid JSON detected in metrics.json!"
-        else
-          echo "JSON is valid."
-        fi
+    # - name: Generate Metrics JSON
+    #   run: |
+    #     # Create metrics.json file
+    #     echo "{" > metrics.json
+    #     echo "  \"timestamp\": \"$(date -u +"%Y-%m-%dT%H:%M:%SZ")\"," >> metrics.json
+    #     echo "  \"total_tests\": $TOTAL_TESTS," >> metrics.json
+    #     echo "  \"passed_tests\": $PASSED_TESTS," >> metrics.json
+    #     echo "  \"failed_tests\": $FAILED_TESTS," >> metrics.json
+    #     echo "  \"pass_rate\": $PASS_RATE," >> metrics.json
+    #     echo "  \"duration_seconds\": 0," >> metrics.json
+    #     echo "  \"critical_tests_count\": $CRITICAL_TESTS," >> metrics.json
+    #     echo "  \"run_id\": \"${{ github.run_id }}\"," >> metrics.json
+    #     echo "  \"repository\": \"${{ github.repository }}\"," >> metrics.json
+    #     echo "  \"branch\": \"${{ github.ref }}\"" >> metrics.json
+    #     echo "}" >> metrics.json
+    #     
+    #     echo "Created metrics.json:"
+    #     cat metrics.json
+    #     echo "Validating JSON format..."
+    #     if ! jq empty metrics.json; then
+    #       echo "WARNING: Invalid JSON detected in metrics.json!"
+    #     else
+    #       echo "JSON is valid."
+    #     fi
 
     - name: Create Dashboard HTML
       run: |
